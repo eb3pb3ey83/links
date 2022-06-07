@@ -1,0 +1,8 @@
+{
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  },
+  "html.format.indentHandlebars": true,
+  "html.format.endWithNewline": true,
+  "html.format.indentInnerHtml": true,
+}
