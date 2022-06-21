@@ -5,10 +5,17 @@ import { UserService } from '../user/user.service'
 import { CreateUserDto } from 'src/features/user/create-user-dto'
 import { EmailException } from 'src/core/exceptions/email.exception'
 import { AuthService } from 'src/features/auth/auth.service'
+import { ConfigService } from '@nestjs/config'
 
 @Controller()
 export class AuthController {
-  constructor(private userService: UserService, private jwtService: JwtService, private authService: AuthService, private sesService: SesService) {}
+  constructor(
+    private userService: UserService,
+    private jwtService: JwtService,
+    private authService: AuthService,
+    private sesService: SesService,
+    private configService: ConfigService,
+  ) {}
 
   @Post('register')
   async register(@Body() createUserDto: CreateUserDto) {
@@ -26,7 +33,7 @@ export class AuthController {
         password,
         categories,
       },
-      { secret: process.env.JWT_ACCOUNT_ACTIVATION },
+      { secret: this.configService.get('jwt.accountActivation'), expiresIn: '60s' },
     )
 
     const params = this.authService.registerEmailParams(email, token)

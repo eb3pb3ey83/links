@@ -6,6 +6,7 @@ import { SesModule } from '@nextnm/nestjs-ses'
 import { JwtModule } from '@nestjs/jwt'
 import { UserService } from 'src/features/user/user.service'
 import { LocalStrategy } from './local.strategy'
+import { ConfigModule, ConfigService } from '@nestjs/config'
 
 @Module({
   imports: [
@@ -15,7 +16,19 @@ import { LocalStrategy } from './local.strategy'
       AKI_KEY: 'AKIAUU76LOZWBJMXWQXO',
       REGION: 'us-east-1',
     }),
-    JwtModule.register({ secret: 'JKDFKJU438094304HUH3IUHUI' }),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        const secret = config.get('jwt.secret')
+        return {
+          secret,
+          signOptions: {
+            expiresIn: '60s',
+          },
+        }
+      },
+    }),
   ],
   controllers: [AuthController],
   providers: [AuthService, UserService, LocalStrategy],

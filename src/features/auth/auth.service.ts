@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common'
+import { JwtService } from '@nestjs/jwt'
 import { CommonUtility } from 'src/core/utils/common.utility'
 import { UserService } from '../user/user.service'
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService, private readonly jwtService: JwtService) {}
   public registerEmailParams(email: string, token: string) {
     return {
       from: 'samuel.zhuang@cloud-interactive.com',

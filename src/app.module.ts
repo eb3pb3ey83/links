@@ -11,6 +11,7 @@ import { Module, ValidationPipe } from '@nestjs/common'
 import { MongooseModule } from '@nestjs/mongoose'
 import { APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core'
 import { ResponseInterceptor } from './core/interceptors/response.interceptor'
+import { AppController } from './app.controller'
 
 @Module({
   imports: [
@@ -27,10 +28,10 @@ import { ResponseInterceptor } from './core/interceptors/response.interceptor'
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         uri: config.get<string>('mongo.uri'),
-        useFindAndModify: false,
       }),
     }),
   ],
+  controllers: [AppController],
   providers: [
     {
       provide: APP_INTERCEPTOR,
