@@ -2,6 +2,9 @@ import { InjectModel } from '@nestjs/mongoose'
 import { FilterQuery, Model } from 'mongoose'
 import { Injectable } from '@nestjs/common'
 import { CurrentUser, User, UserDocument, UserRequest, USER_MODEL_TOKEN } from 'src/features/user/user.schema'
+import { CreateUserDto } from './create-user-dto'
+import { nanoid } from 'nanoid'
+import { CommonUtility } from 'src/core/utils/common.utility'
 
 @Injectable()
 export class UserService {
@@ -22,5 +25,19 @@ export class UserService {
     const { id, name, password, categories } = request
 
     return this.userModel.findOneAndUpdate({ _id: id }, { name, password, categories }, { new: true }).exec()
+  }
+
+  public createUser(user: { [key: string]: any }) {
+    const { name, email, password, categories } = user
+    const username = nanoid()
+    const encryptedPassword = CommonUtility.encryptBySalt(password)
+
+    return this.userModel.create({
+      username,
+      name,
+      email,
+      categories,
+      password: encryptedPassword,
+    })
   }
 }

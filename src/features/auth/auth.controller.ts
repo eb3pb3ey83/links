@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common'
+import { Body, Controller, Post, UseGuards } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import { SesService } from '@nextnm/nestjs-ses'
 import { UserService } from '../user/user.service'
@@ -6,15 +6,24 @@ import { CreateUserDto } from 'src/features/user/create-user-dto'
 import { EmailException } from 'src/core/exceptions/email.exception'
 import { AuthService } from 'src/features/auth/auth.service'
 import { ConfigService } from '@nestjs/config'
+import { AuthGuard } from '@nestjs/passport'
+import { TypeGuardService } from 'src/common/services/type-guard.service'
+import { TokenException } from 'src/core/exceptions/token.exception'
+import { User, UserDocument, USER_MODEL_TOKEN } from '../user/user.schema'
+import { Model } from 'mongoose'
+import { InjectModel } from '@nestjs/mongoose'
 
 @Controller()
 export class AuthController {
   constructor(
+    private typeGuardService: TypeGuardService,
     private userService: UserService,
     private jwtService: JwtService,
     private authService: AuthService,
     private sesService: SesService,
     private configService: ConfigService,
+    @InjectModel(USER_MODEL_TOKEN)
+    private readonly userModel: Model<UserDocument>,
   ) {}
 
   @Post('register')
@@ -48,8 +57,25 @@ export class AuthController {
       }))
   }
 
-  // @Post('register/activate')
-  // registerActivate() {}
+  @Post('register/activate')
+  @UseGuards(AuthGuard('jwt-account-activation'))
+  async registerActivate(@Body() body: { token: string }) {
+    const userData = this.jwtService.decode(body.token)
+
+    if (this.typeGuardService.isString(userData)) {
+      throw new TokenException()
+    }
+
+    const { email } = userData
+
+    const user = await this.userService.findOne({ email })
+
+    if (user) {
+      throw new EmailException()
+    }
+
+    this.userService.createUser(userData)
+  }
 
   // @Post('login')
   // login() {}
