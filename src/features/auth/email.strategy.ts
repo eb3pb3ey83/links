@@ -1,12 +1,11 @@
 import { Injectable } from '@nestjs/common'
 import { PassportStrategy } from '@nestjs/passport'
 import { Strategy } from 'passport-local'
-import { PasswordException } from 'src/core/exceptions/password.exception'
-import { UserException } from 'src/core/exceptions/user.exception'
+import { EmailException } from 'src/core/exceptions/email.exception'
 import { AuthService } from './auth.service'
 
 @Injectable()
-export class LocalStrategy extends PassportStrategy(Strategy) {
+export class EmailStrategy extends PassportStrategy(Strategy) {
   constructor(private readonly authService: AuthService) {
     super({
       usernameField: 'email',
@@ -16,14 +15,9 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
   async validate(email: string, password: string) {
     const response = await this.authService.validateUser(email, password)
     const isUserError = response === 'user error'
-    const isPasswordError = response === 'password error'
 
     if (isUserError) {
-      throw new UserException()
-    }
-
-    if (isPasswordError) {
-      throw new PasswordException()
+      throw new EmailException()
     }
 
     return response

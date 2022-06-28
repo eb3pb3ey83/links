@@ -21,17 +21,38 @@ export class AuthService {
       `,
       replyTo: '',
       cc: '',
-      bcc: [],
       altText: '',
     }
   }
 
-  async validateUser(username: string, password: string) {
-    const user = await this.userService.findOne({ username })
-    const { hash } = CommonUtility.encryptBySalt(password, user?.password?.salt)
-    if (!user || hash !== user?.password?.hash) {
-      return null
+  public forgotPasswordParams(email: string, token: string) {
+    return {
+      from: 'samuel.zhuang@cloud-interactive.com',
+      to: email,
+      subject: 'Password reset link',
+      html: `
+        <html>
+            <h1>Vefiry your email address</h1>
+            <p>Please use the following link to reset your password:</p>
+            <p>test/auth/activate/${token}</p>
+        </html>
+      `,
+      replyTo: '',
+      cc: '',
+      altText: '',
     }
+  }
+
+  async validateUser(email: string, password: string) {
+    const user = await this.userService.findOne({ email })
+    const { hash } = CommonUtility.encryptBySalt(password, user?.password?.salt)
+
+    if (!user) {
+      return 'user error'
+    } else if (hash !== user?.password?.hash) {
+      return 'password error'
+    }
+
     return user
   }
 

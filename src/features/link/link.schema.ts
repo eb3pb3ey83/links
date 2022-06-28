@@ -35,7 +35,7 @@ export class Link {
       required: true,
     },
   ])
-  categories: Types.ObjectId[]
+  categories: Types.ObjectId
 
   @Prop({ default: 'Free' })
   type: string

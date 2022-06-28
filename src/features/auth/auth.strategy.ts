@@ -13,7 +13,7 @@ export class AuthStrategy extends PassportStrategy(Strategy) {
     })
   }
 
-  validate(payload: any) {
+  validate(payload: unknown) {
     return payload
   }
 }

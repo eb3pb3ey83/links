@@ -1,4 +1,5 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common'
+import { UserException } from './../../core/exceptions/user.exception'
+import { Body, Controller, Post, Put, Req, UseGuards } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import { SesService } from '@nextnm/nestjs-ses'
 import { UserService } from '../user/user.service'
@@ -9,7 +10,8 @@ import { ConfigService } from '@nestjs/config'
 import { AuthGuard } from '@nestjs/passport'
 import { TypeGuardService } from 'src/common/services/type-guard.service'
 import { TokenException } from 'src/core/exceptions/token.exception'
-import { User, UserDocument, USER_MODEL_TOKEN } from '../user/user.schema'
+import { Request } from 'express'
+import { UserDocument, USER_MODEL_TOKEN } from '../user/user.schema'
 import { Model } from 'mongoose'
 import { InjectModel } from '@nestjs/mongoose'
 
@@ -67,7 +69,6 @@ export class AuthController {
     }
 
     const { email } = userData
-
     const user = await this.userService.findOne({ email })
 
     if (user) {
@@ -77,11 +78,34 @@ export class AuthController {
     this.userService.createUser(userData)
   }
 
-  // @Post('login')
-  // login() {}
+  @UseGuards(AuthGuard('local'))
+  @Post('login')
+  login(@Req() request: { user: UserDocument }) {
+    const { _id, name, email, role } = request.user
+    const token = this.jwtService.sign({ _id }, { secret: this.configService.get('jwt.secret'), expiresIn: '60s' })
+    return { token, user: { _id, name, email, role } }
+  }
 
-  // @Put('forgot-password')
-  // forgotPassword() {}
+  @Put('forgot-password')
+  async forgotPassword(@Body() { email }: { email: string }) {
+    const user = await this.userService.findOne({ email })
+
+    if (!user) {
+      throw new UserException()
+    }
+
+    const token = this.jwtService.sign({ name: user.name }, { secret: this.configService.get('jwt.resetPassword'), expiresIn: '60s' })
+    const params = this.authService.forgotPasswordParams(email, token)
+
+    return this.sesService
+      .sendEmail(params)
+      .then(() => ({
+        message: `Email has been sent to ${email}, Follow the instructions to complete your registration`,
+      }))
+      .catch(() => ({
+        message: `We could not verify your email. Please try again`,
+      }))
+  }
 
   // @Put('reset-password')
   // reserPassword() {}
