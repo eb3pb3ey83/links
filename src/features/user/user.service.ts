@@ -2,7 +2,6 @@ import { InjectModel } from '@nestjs/mongoose'
 import { FilterQuery, Model } from 'mongoose'
 import { Injectable } from '@nestjs/common'
 import { CurrentUser, User, UserDocument, UserRequest, USER_MODEL_TOKEN } from 'src/features/user/user.schema'
-import { CreateUserDto } from './create-user-dto'
 import { nanoid } from 'nanoid'
 import { CommonUtility } from 'src/core/utils/common.utility'
 
@@ -13,8 +12,16 @@ export class UserService {
     return user.save()
   }
 
+  public updateResetPasswordLink(resetPasswordLink: string) {
+    return this.userModel.updateOne({ resetPasswordLink }).exec()
+  }
+
   public findOne(params: FilterQuery<User>) {
     return this.userModel.findOne(params).exec()
+  }
+
+  public updateOne(params: FilterQuery<User>) {
+    return this.userModel.updateOne(params).exec()
   }
 
   public find(params: User) {

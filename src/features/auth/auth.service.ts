@@ -1,12 +1,14 @@
 import { Injectable } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
+import { SesService } from '@nextnm/nestjs-ses'
 import { CommonUtility } from 'src/core/utils/common.utility'
 import { UserDocument } from '../user/user.schema'
 import { UserService } from '../user/user.service'
+import { EmailService } from './auth.model'
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly userService: UserService, private readonly jwtService: JwtService) {}
+  constructor(private readonly userService: UserService, private readonly jwtService: JwtService, private sesService: SesService) {}
   public registerEmailParams(email: string, token: string) {
     return {
       from: 'samuel.zhuang@cloud-interactive.com',
@@ -41,6 +43,28 @@ export class AuthService {
       cc: '',
       altText: '',
     }
+  }
+
+  public registerPasswordEmailService(email: string, params: EmailService) {
+    return this.sesService
+      .sendEmail(params)
+      .then(() => ({
+        message: `Email has been sent to ${email}, Follow the instructions to complete your registration`,
+      }))
+      .catch(() => ({
+        message: `We could not verify your email. Please try again`,
+      }))
+  }
+
+  public forgotPasswordEmailService(email: string, params: EmailService) {
+    return this.sesService
+      .sendEmail(params)
+      .then(() => ({
+        message: `Email has been sent to ${email}, Follow the instructions to complete your registration`,
+      }))
+      .catch(() => ({
+        message: `We could not verify your email. Please try again`,
+      }))
   }
 
   async validateUser(email: string, password: string) {

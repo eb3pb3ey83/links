@@ -1,7 +1,6 @@
 import { UserException } from './../../core/exceptions/user.exception'
 import { Body, Controller, Post, Put, Req, UseGuards } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
-import { SesService } from '@nextnm/nestjs-ses'
 import { UserService } from '../user/user.service'
 import { CreateUserDto } from 'src/features/user/create-user-dto'
 import { EmailException } from 'src/core/exceptions/email.exception'
@@ -10,10 +9,9 @@ import { ConfigService } from '@nestjs/config'
 import { AuthGuard } from '@nestjs/passport'
 import { TypeGuardService } from 'src/common/services/type-guard.service'
 import { TokenException } from 'src/core/exceptions/token.exception'
-import { Request } from 'express'
-import { UserDocument, USER_MODEL_TOKEN } from '../user/user.schema'
-import { Model } from 'mongoose'
-import { InjectModel } from '@nestjs/mongoose'
+import { UserDocument } from '../user/user.schema'
+import { safeAwait } from 'src/common/helpers/safewait'
+import { ResetException } from 'src/core/exceptions/reset.exception'
 
 @Controller()
 export class AuthController {
@@ -22,10 +20,7 @@ export class AuthController {
     private userService: UserService,
     private jwtService: JwtService,
     private authService: AuthService,
-    private sesService: SesService,
     private configService: ConfigService,
-    @InjectModel(USER_MODEL_TOKEN)
-    private readonly userModel: Model<UserDocument>,
   ) {}
 
   @Post('register')
@@ -49,14 +44,7 @@ export class AuthController {
 
     const params = this.authService.registerEmailParams(email, token)
 
-    return this.sesService
-      .sendEmail(params)
-      .then(() => ({
-        message: `Email has been sent to ${email}, Follow the instructions to complete your registration`,
-      }))
-      .catch(() => ({
-        message: `We could not verify your email. Please try again`,
-      }))
+    return this.authService.registerPasswordEmailService(email, params)
   }
 
   @Post('register/activate')
@@ -94,19 +82,25 @@ export class AuthController {
       throw new UserException()
     }
 
-    const token = this.jwtService.sign({ name: user.name }, { secret: this.configService.get('jwt.resetPassword'), expiresIn: '60s' })
+    const token = this.jwtService.sign({ name: user.name }, { secret: this.configService.get('jwt.resetPassword') })
     const params = this.authService.forgotPasswordParams(email, token)
 
-    return this.sesService
-      .sendEmail(params)
-      .then(() => ({
-        message: `Email has been sent to ${email}, Follow the instructions to complete your registration`,
-      }))
-      .catch(() => ({
-        message: `We could not verify your email. Please try again`,
-      }))
+    await this.userService.updateResetPasswordLink(token)
+
+    return this.authService.forgotPasswordEmailService(email, params)
   }
 
-  // @Put('reset-password')
-  // reserPassword() {}
+  @Put('reset-password')
+  async resetPassword(@Body() { token }: { token: string }) {
+    const [tokenError] = await safeAwait(this.jwtService.verifyAsync(token, { secret: this.configService.get('jwt.resetPassword') }))
+    const [resetError, response] = await safeAwait(this.userService.updateOne({ resetPasswordLink: token }))
+
+    if (tokenError) {
+      throw new TokenException()
+    }
+
+    if (resetError) {
+      throw new ResetException()
+    }
+  }
 }
