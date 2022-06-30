@@ -12,6 +12,7 @@ import { TokenException } from 'src/core/exceptions/token.exception'
 import { UserDocument } from '../user/user.schema'
 import { safeAwait } from 'src/common/helpers/safewait'
 import { ResetException } from 'src/core/exceptions/reset.exception'
+import { CommonUtility } from 'src/core/utils/common.utility'
 
 @Controller()
 export class AuthController {
@@ -85,22 +86,37 @@ export class AuthController {
     const token = this.jwtService.sign({ name: user.name }, { secret: this.configService.get('jwt.resetPassword') })
     const params = this.authService.forgotPasswordParams(email, token)
 
-    await this.userService.updateResetPasswordLink(token)
+    const [resetError] = await safeAwait(this.userService.updateResetPasswordLink(token))
+
+    if (resetError) {
+      throw new ResetException()
+    }
 
     return this.authService.forgotPasswordEmailService(email, params)
   }
 
   @Put('reset-password')
-  async resetPassword(@Body() { token }: { token: string }) {
+  async resetPassword(@Body() { token, newPassword }: { token: string; newPassword: string }) {
     const [tokenError] = await safeAwait(this.jwtService.verifyAsync(token, { secret: this.configService.get('jwt.resetPassword') }))
-    const [resetError, response] = await safeAwait(this.userService.updateOne({ resetPasswordLink: token }))
+    const [userError] = await safeAwait(this.userService.findOne({ resetPasswordLink: token }))
 
     if (tokenError) {
       throw new TokenException()
     }
 
-    if (resetError) {
-      throw new ResetException()
+    if (userError) {
+      throw new UserException()
+    }
+
+    const encryptedPassword = CommonUtility.encryptBySalt(newPassword)
+
+    await this.userService.updateOne({
+      password: encryptedPassword,
+      resetPasswordLink: '',
+    })
+
+    return {
+      message: 'Great! Now you can login with your new password',
     }
   }
 }
